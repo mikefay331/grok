@@ -234,13 +234,15 @@ export async function refillTopicQueue() {
 // Get archived debates
 export async function getArchivedDebates(start = 0, end = 9): Promise<ArchivedDebate[]> {
   const debates = await redis.lrange(ARCHIVE_KEY, start, end);
-  return debates as ArchivedDebate[];
+  // Parse each JSON string into an ArchivedDebate object
+  return debates.map(debate => JSON.parse(debate as string)) as ArchivedDebate[];
 }
 
 // Get a specific archived debate by ID
 export async function getArchivedDebateById(id: string): Promise<ArchivedDebate | null> {
   const debate = await redis.get(`debate:${id}`);
-  return debate as ArchivedDebate | null;
+  // Parse the JSON string if it exists
+  return debate ? JSON.parse(debate as string) as ArchivedDebate : null;
 }
 
 // Start a new debate cycle
