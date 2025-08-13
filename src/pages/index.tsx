@@ -1,8 +1,6 @@
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
-<head>
-  <link rel="stylesheet" href="/fallback.css" />
-</head>
+
 export default function Home() {
   return (
     <div style={{ 
@@ -16,6 +14,7 @@ export default function Home() {
         <title>Backrooms Terminal</title>
         <meta name="description" content="Grok vs ChatGPT debates in a simulated backrooms terminal" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="stylesheet" href="/fallback.css" />
       </Head>
 
       <header style={{ marginBottom: '20px' }}>
