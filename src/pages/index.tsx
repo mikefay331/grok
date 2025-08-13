@@ -1,65 +1,70 @@
-import { useEffect, useState } from 'react';
 import Head from 'next/head';
-import Terminal from '../components/Terminal';
-import MoodAnalyzer from '../components/MoodAnalyzer';
-import Header from '../components/Header';
-import { useDebateStream } from '../hooks/useDebateStream';
-import { ArchivedDebate } from '@/types';
-
+import { useEffect, useState } from 'react';
+<head>
+  <link rel="stylesheet" href="/fallback.css" />
+</head>
 export default function Home() {
-  const { debateState, error, isConnected } = useDebateStream();
-  const [archivedCount, setArchivedCount] = useState(0);
-  
-  // Fetch archived debate count
-  useEffect(() => {
-    async function fetchArchivedCount() {
-      try {
-        const response = await fetch('/api/archive/list');
-        const data = await response.json() as ArchivedDebate[];
-        setArchivedCount(data.length);
-      } catch (error) {
-        console.error('Error fetching archived debates:', error);
-      }
-    }
-    
-    fetchArchivedCount();
-    const interval = setInterval(fetchArchivedCount, 30000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <>
+    <div style={{ 
+      backgroundColor: '#0d1117', 
+      minHeight: '100vh',
+      padding: '20px',
+      fontFamily: 'Courier New, monospace',
+      color: '#33ff66'
+    }}>
       <Head>
-        <title>Backrooms Terminal: Grok vs ChatGPT</title>
-        <meta name="description" content="Live AI debates between Grok and ChatGPT in a backrooms-themed terminal" />
+        <title>Backrooms Terminal</title>
+        <meta name="description" content="Grok vs ChatGPT debates in a simulated backrooms terminal" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="flex flex-col min-h-screen bg-black text-gray-300 font-mono">
-        <Header archivedCount={archivedCount} />
-        
-        <div className="flex flex-col md:flex-row flex-1 p-4">
-          <main className="md:w-2/3 pr-0 md:pr-4 mb-4 md:mb-0">
-            <div className="h-full">
-              <Terminal debate={debateState} />
-              
-              {error && (
-                <div className="mt-2 p-2 bg-red-900 border border-red-700 rounded text-white text-xs">
-                  <span>Error: {error}</span>
-                </div>
-              )}
-            </div>
-          </main>
-          
-          <aside className="md:w-1/3">
-            <div className="p-4 bg-gray-900 border border-gray-800 rounded">
-              <h2 className="text-lg text-green-500 mb-4">Agent Mood Analysis</h2>
-              <MoodAnalyzer debate={debateState} />
-            </div>
-          </aside>
+      <header style={{ marginBottom: '20px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#33ff66' }}>Backrooms Terminal</h1>
+        <p style={{ color: '#c9d1d9', fontSize: '14px' }}>
+          Watch Grok and ChatGPT debate in a simulated backrooms terminal
+        </p>
+      </header>
+
+      <main>
+        <div style={{ 
+          border: '1px solid #30363d', 
+          borderRadius: '6px', 
+          backgroundColor: '#0d1117',
+          height: '500px',
+          marginBottom: '20px',
+          overflow: 'auto',
+          padding: '10px'
+        }}>
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ color: '#c9d1d9' }}>[system] Initializing terminal...</span>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ color: '#ff6347', fontWeight: 'bold' }}>[Grok]</span>
+            <span style={{ marginLeft: '8px' }}>Waiting for debate to start...</span>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <span style={{ color: '#33ff66', fontWeight: 'bold' }}>[ChatGPT]</span>
+            <span style={{ marginLeft: '8px' }}>Ready to engage in discussion.</span>
+          </div>
         </div>
-      </div>
-    </>
+
+        <div style={{ 
+          border: '1px solid #30363d',
+          borderRadius: '6px',
+          backgroundColor: '#161b22',
+          padding: '15px'
+        }}>
+          <h2 style={{ marginBottom: '15px', color: '#33ff66' }}>Agent Mood Analysis</h2>
+          <div style={{ marginBottom: '15px' }}>
+            <h3 style={{ color: '#ff6347', marginBottom: '5px' }}>Grok</h3>
+            <div style={{ color: '#c9d1d9' }}>Mood: Analyzing...</div>
+          </div>
+          <div>
+            <h3 style={{ color: '#33ff66', marginBottom: '5px' }}>ChatGPT</h3>
+            <div style={{ color: '#c9d1d9' }}>Mood: Analyzing...</div>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
