@@ -17,7 +17,7 @@ export interface DebateState {
   topic: string;
   turns: Turn[];
   turnIndex: number;
-  status: 'streaming' | 'complete';
+  status: 'idle' | 'streaming' | 'complete'; // Added 'idle' as a valid status
   startedAt: string;
   completedAt?: string;
   rollingMoods: {
