@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { DebateState, SSEEvent } from '../types';
+import { DebateState, Turn, Mood } from '../types';
+
+// Define valid speaker types
+type SpeakerType = 'Grok' | 'ChatGPT';
+
+interface MoodUpdate {
+  tone: Mood;
+  score: number;
+}
 
 export function useDebateStream() {
   const [debateState, setDebateState] = useState<DebateState | null>(null);
@@ -7,81 +15,79 @@ export function useDebateStream() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    let eventSource: EventSource;
+    let eventSource: EventSource | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
 
-    const connectSSE = () => {
+    const connectToStream = () => {
       try {
-        // Close any existing connection
-        if (eventSource) {
-          eventSource.close();
-        }
-
-        // Create a new SSE connection
         eventSource = new EventSource('/api/debate/stream');
         setIsConnected(true);
 
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data) as SSEEvent;
-            
-            if (data.type === 'status' || data.type === 'turn') {
-              setDebateState(data.payload);
-            } else if (data.type === 'mood') {
-              setDebateState(prev => {
-                if (!prev) return prev;
-                
-                const updatedTurns = [...prev.turns];
-                const { turnIndex, speaker, mood } = data.payload;
-                
-                if (updatedTurns[turnIndex]) {
-                  updatedTurns[turnIndex].mood = mood;
-                }
-                
-                // Update rolling mood if this is for the current speaker
-                const rollingMoods = { ...prev.rollingMoods };
-                if (speaker && mood) {
-                  rollingMoods[speaker] = mood;
-                }
-                
-                return {
-                  ...prev,
-                  turns: updatedTurns,
-                  rollingMoods
-                };
-              });
-            }
-          } catch (err) {
-            console.error('Error parsing SSE data:', err);
-          }
+        eventSource.onopen = () => {
+          setIsConnected(true);
+          setError(null);
         };
 
-        eventSource.onerror = (err) => {
-          console.error('SSE error:', err);
-          setError('Connection error. Reconnecting...');
+        eventSource.onerror = (e) => {
           setIsConnected(false);
+          eventSource?.close();
           
-          // Close the connection
-          eventSource.close();
-          
-          // Attempt to reconnect after a delay
-          setTimeout(connectSSE, 3000);
+          // Retry connection after 5 seconds
+          retryTimeout = setTimeout(connectToStream, 5000);
         };
+
+        eventSource.addEventListener('debate-update', (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            setDebateState((prev) => {
+              if (!prev) return data;
+              
+              // Update mood if provided
+              const { speaker, mood } = data;
+              const rollingMoods = { ...prev.rollingMoods };
+              
+              // Only update if speaker is a valid key and mood exists
+              if (speaker && mood && (speaker === 'Grok' || speaker === 'ChatGPT')) {
+                rollingMoods[speaker as SpeakerType] = mood;
+              }
+              
+              return {
+                ...prev,
+                ...data,
+                rollingMoods
+              };
+            });
+          } catch (err) {
+            console.error('Error parsing debate update:', err);
+          }
+        });
+
+        eventSource.addEventListener('error-update', (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            setError(data.message || 'An error occurred');
+          } catch (err) {
+            setError('An error occurred in the debate stream');
+          }
+        });
       } catch (err) {
-        console.error('Failed to connect to SSE:', err);
-        setError('Failed to connect. Retrying...');
         setIsConnected(false);
+        setError('Failed to connect to debate stream');
         
-        // Attempt to reconnect after a delay
-        setTimeout(connectSSE, 3000);
+        // Retry connection after 5 seconds
+        retryTimeout = setTimeout(connectToStream, 5000);
       }
     };
 
-    connectSSE();
+    connectToStream();
 
-    // Cleanup on unmount
+    // Cleanup function
     return () => {
       if (eventSource) {
         eventSource.close();
+      }
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
       }
     };
   }, []);
