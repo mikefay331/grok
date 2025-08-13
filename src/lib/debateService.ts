@@ -11,6 +11,11 @@ const ARCHIVE_KEY = 'debate_archive';
 const MIN_TOPIC_QUEUE_SIZE = 3;
 const TOPICS_TO_GENERATE = 10;
 
+// Type guard to check if a string is a valid speaker
+function isValidSpeaker(speaker: string): speaker is 'Grok' | 'ChatGPT' {
+  return speaker === 'Grok' || speaker === 'ChatGPT';
+}
+
 // Generate a debate transcript using GPT-4o
 export async function generateDebate(topic: string): Promise<Turn[]> {
   try {
@@ -160,14 +165,16 @@ export async function advanceTurn(): Promise<DebateState | null> {
       debate.turns[debate.turnIndex].mood = mood;
       
       // Update rolling mood for the speaker
-      if (!debate.rollingMoods[turn.speaker]) {
-        debate.rollingMoods[turn.speaker] = mood;
-      } else {
-        const current = debate.rollingMoods[turn.speaker]!;
-        debate.rollingMoods[turn.speaker] = {
-          tone: mood.score > current.score ? mood.tone : current.tone,
-          score: (current.score * 0.7) + (mood.score * 0.3) // Weighted average
-        };
+      if (isValidSpeaker(turn.speaker)) {
+        if (!debate.rollingMoods[turn.speaker]) {
+          debate.rollingMoods[turn.speaker] = mood;
+        } else {
+          const current = debate.rollingMoods[turn.speaker]!;
+          debate.rollingMoods[turn.speaker] = {
+            tone: mood.score > current.score ? mood.tone : current.tone,
+            score: (current.score * 0.7) + (mood.score * 0.3) // Weighted average
+          };
+        }
       }
       
       await redis.set(DEBATE_KEY, debate);
@@ -201,13 +208,13 @@ export async function archiveDebate(debate: DebateState) {
   };
   
   // Add to archive list
-  await redis.lpush(ARCHIVE_KEY, archivedDebate);
+  await redis.lpush(ARCHIVE_KEY, JSON.stringify(archivedDebate));
   
   // Keep only the latest 50 debates
   await redis.ltrim(ARCHIVE_KEY, 0, 49);
   
   // Also store individually by ID for quick access
-  await redis.set(`debate:${debate.id}`, archivedDebate);
+  await redis.set(`debate:${debate.id}`, JSON.stringify(archivedDebate));
 }
 
 // Get the next topic from the queue
